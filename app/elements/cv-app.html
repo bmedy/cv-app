@@ -1,0 +1,149 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="cv-profile.html">
+<link rel="import" href="cv-search.html">
+<link rel="import" href="../bower_components/core-drawer-panel/core-drawer-panel.html">
+<link rel="import" href="../bower_components/core-icon-button/core-icon-button.html">
+<link rel="import" href="../bower_components/core-animated-pages/core-animated-pages.html">
+<link rel="import" href="../bower_components/core-animated-pages/transitions/slide-up.html">
+<link rel="import" href="../bower_components/core-animated-pages/transitions/scale-up.html">
+<link rel="import" href="../bower_components/core-animated-pages/transitions/tile-cascade.html">
+<link rel="import" href="../bower_components/core-media-query/core-media-query.html">
+<link rel="import" href="../bower_components/core-toolbar/core-toolbar.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+
+<polymer-element name="cv-app" attributes="user categories" vertical layout>
+  <template>
+    <style>
+
+      :host {
+        overflow: hidden;
+      }
+
+      .splash {
+        background-color: #eee;
+        background-repeat: no-repeat;
+        background-position: 50%;
+        background-image: url(../images/splash.svg);
+      }
+
+      .splash.wide {
+        background-size: 512px;
+      }
+      .toolbar {
+        background-color: steelblue;
+      }
+
+    </style>
+
+    <core-toolbar class="toolbar">
+      <core-icon-button icon="{{selected != 'dashboard' ? 'arrow-back' : 'menu'}}" on-tap="{{back}}"></core-icon-button>
+      <div flex>Stuff</div>
+      <core-icon-button icon="search" on-tap=""></core-icon-button>
+    </core-toolbar>
+    <core-animated-pages selected="{{selected}}" transitions="cross-fade cross-fade-delayed scale-up slide-up slide-up-offscreen slide-down tile-cascade hero-transition" flex on-core-animated-pages-transition-end="{{transitionEndAction}}">
+      <div name="splash">
+        <span fit class="splash {{ {wide: wide} | tokenList }}" cross-fade></span>
+      </div>
+      
+      <cv-dashboard id="dashboard" name="dashboard" user="{{user}}" wide="{{wide}}"></cv-dashboard>
+      
+      <cv-search id="search" name="search" user="{{user}}" wide="{{wide}}"></cv-search>
+  
+      <cv-profile id="profile" name="profile" user="{{user}}" wide="{{wide}}"></cv-profile>
+      
+    </core-animated-pages>
+    
+    <core-media-query query="min-width: {{responsiveWidth}}" queryMatches="{{wide}}"></core-media-query>
+  </template>
+  <script>
+
+    window.setAppTransitionSpeed = function(ms) {
+      CoreStyle.g.transitions.duration = ms + 'ms';
+      CoreStyle.g.transitions.scaleDelay = CoreStyle.g.transitions.duration;  
+    }
+
+    setAppTransitionSpeed(350);
+
+    Polymer({
+      
+      selected: 'splash',
+
+      responsiveWidth: '900px',
+      
+      connected: false,
+      
+      minSplashTime: 1000,
+
+      disableLeaderboard: false,
+      
+      observe: {
+        'user': 'startup'
+      },
+
+      ready: function() {
+        this.readyTime = Date.now();
+
+        var dummyState = {app: 'cv'};
+        // set up history state
+        if (!history.state) {
+          history.pushState(dummyState, '');
+        }
+
+        // "back" button will show categories, unless in profile screen
+        window.onpopstate = function() {
+          if (this.selected !== 'profile') {
+            this.showCategories();
+          }
+          // repopulate history state so we get the popstate event again
+          history.pushState(dummyState, '');
+        }.bind(this);
+
+        if (!this.user) {
+          this.startup();
+        }
+      },
+
+      showProfile: function() {
+        this.selected = 'profile';
+        this.$.profile.userDefaults = this.user;
+      },
+      showSearch: function() {
+        this.selected = 'search';
+      },
+      
+      pageSelect: function() {
+        if (this.category) {
+          var n = this.category.name;
+          if (n === 'profile') {
+            this.showProfile();
+          } else if (n === 'search') {
+            this.showSearch();
+          } else {
+            this.showDashboard();
+          }
+        }
+      },
+
+      startup: function() {
+        var elapsed = Date.now() - this.readyTime;
+        console.log('elapsed',elapsed);
+        var t = this.minSplashTime - elapsed;
+        console.log('t',t);
+        this.async('completeStartup', null, t > 0 ? t : 0);
+      },
+      
+      completeStartup: function() {
+        if (this.user) {
+          this.selected = 'dashboard';
+        } else {
+          this.selected = 'dashboard';
+          //this.selected = 'profile';
+        }
+      },
+
+      transitionEndAction: function() {
+        this.disableLeaderboard = (this.selected !== 'dashboard');
+      }
+    });
+  </script>
+</polymer-element>
